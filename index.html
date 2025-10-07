@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Discord Auth — Hosting Frontend</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7c3aed;--glass: rgba(255,255,255,0.03);font-family:Inter,system-ui,Arial,sans-serif}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071028 0%, #081425 100%);color:#e6eef6}
+    .container{max-width:920px;margin:48px auto;padding:24px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)); border-radius:12px;padding:28px;box-shadow:0 6px 30px rgba(2,6,23,0.6)}
+    h1{margin:0 0 12px;font-size:20px}
+    p.muted{color:var(--muted);margin:6px 0 18px}
+    .center{display:flex;align-items:center;justify-content:center}
+    button.cta{background:var(--accent);border:0;padding:12px 18px;color:white;border-radius:10px;cursor:pointer;font-weight:600}
+    .small{font-size:13px;color:var(--muted)}
+    .inline{display:inline-block}
+    .form-row{margin:10px 0;display:flex;gap:10px;align-items:center}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type="text"], input[type="password"], select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:var(--muted)}
+    .login-panel{display:grid;gap:12px;align-items:start}
+    .hidden{display:none}
+    nav.tabs{display:flex;gap:10px;margin-bottom:18px}
+    .tab{padding:8px 12px;border-radius:8px;cursor:pointer;background:rgba(255,255,255,0.01)}
+    .tab.active{background:rgba(255,255,255,0.03);box-shadow:inset 0 -2px 0 var(--accent)}
+    .package{border-radius:10px;padding:12px;background:rgba(255,255,255,0.02);display:flex;justify-content:space-between;align-items:center}
+    .muted-accent{color:var(--muted);font-size:13px}
+    .danger{color:#ff8a8a}
+    footer.note{margin-top:18px;color:var(--muted);font-size:13px}
+    .log{margin-top:12px;background:#071022;padding:12px;border-radius:8px;color:var(--muted);max-height:200px;overflow:auto;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card" id="app">
+
+      <div id="view-login">
+        <h1>Login / Register with Discord</h1>
+        <p class="muted">Click the button below to reveal the login form. This app accepts a bot token input (kept locally) and stores it in your browser's Local Storage.</p>
+
+        <div class="center">
+          <button id="startBtn" class="cta">Login / Register with Discord!</button>
+        </div>
+
+        <div id="loginForm" class="login-panel hidden" style="margin-top:18px">
+          <div>
+            <label for="discordName">Discord Username (for logs)</label>
+            <input id="discordName" type="text" placeholder="e.g. Mojang#1234" />
+          </div>
+
+          <div>
+            <label for="botToken">Bot Token</label>
+            <input id="botToken" type="password" placeholder="Bot token (min 57 chars)" />
+            <div style="margin-top:8px" class="small muted-accent">Token will be validated locally and stored in <code>localStorage</code> keys <code>user_discord_name</code> and <code>user_token</code>.</div>
+          </div>
+
+          <div class="form-row">
+            <button id="saveBtn" class="cta inline">Save & Continue</button>
+            <button id="cancelBtn" class="inline" style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:10px;border-radius:8px;cursor:pointer">Cancel</button>
+          </div>
+
+          <div class="small" id="loginMsg"></div>
+          <div class="danger small" id="loginDanger"></div>
+        </div>
+      </div>
+
+      <div id="view-dashboard" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h1>Dashboard</h1>
+            <div class="small">Logged in as <strong id="showName"></strong></div>
+          </div>
+          <div>
+            <button id="logoutBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:8px;cursor:pointer">Logout</button>
+          </div>
+        </div>
+
+        <nav class="tabs" style="margin-top:12px">
+          <div class="tab active" data-tab="bot">Bot Hosting</div>
+          <div class="tab" data-tab="mc">Minecraft Hosting</div>
+        </nav>
+
+        <div id="tab-bot" class="tab-panel">
+          <h3>Bot Hosting Packages</h3>
+          <div style="display:grid;gap:10px">
+            <label class="package"><div><input name="botpkg" type="radio" value='{"ram":"512MB","cpu":1,"cost":"$1"}' checked /> <strong>Tiny</strong> <div class="muted-accent">512MB RAM • 1 CPU • $1</div></div><div></div></label>
+            <label class="package"><div><input name="botpkg" type="radio" value='{"ram":"1GB","cpu":1,"cost":"$2"}'/> <strong>Small</strong> <div class="muted-accent">1GB RAM • 1 CPU • $2</div></div></label>
+            <label class="package"><div><input name="botpkg" type="radio" value='{"ram":"2GB","cpu":2,"cost":"$4"}'/> <strong>Standard</strong> <div class="muted-accent">2GB RAM • 2 CPU • $4</div></div></label>
+          </div>
+          <div style="margin-top:12px" class="form-row">
+            <button id="confirmBot" class="cta">Confirm Bot Hosting</button>
+            <div class="small muted-accent" style="margin-left:12px">Payload will include your bot token (wrapped as a spoiler) for backend provisioning.</div>
+          </div>
+        </div>
+
+        <div id="tab-mc" class="tab-panel hidden">
+          <h3>Minecraft Hosting</h3>
+          <div style="display:grid;gap:10px">
+            <label class="package"><div><input name="mcpkg" type="radio" value='{"ram":"1GB","cpu":1,"cost":"$3"}' checked /> <strong>Pocket</strong> <div class="muted-accent">1GB RAM • 1 CPU • $3</div></div></label>
+            <label class="package"><div><input name="mcpkg" type="radio" value='{"ram":"2GB","cpu":2,"cost":"$6"}'/> <strong>Player</strong> <div class="muted-accent">2GB RAM • 2 CPU • $6</div></div></label>
+            <label class="package"><div><input name="mcpkg" type="radio" value='{"ram":"4GB","cpu":3,"cost":"$10"}'/> <strong>Pro</strong> <div class="muted-accent">4GB RAM • 3 CPU • $10</div></div></label>
+          </div>
+
+          <div style="margin-top:12px" class="form-row">
+            <label style="min-width:120px">Optional: Credits to charge</label>
+            <input id="mcCredits" type="text" placeholder="Amount in USD" style="max-width:140px" />
+          </div>
+
+          <div class="form-row">
+            <button id="confirmMC" class="cta">Confirm Minecraft Hosting</button>
+            <div class="small muted-accent" style="margin-left:12px">This will send a webhook to the provisioning backend.</div>
+          </div>
+        </div>
+
+        <div class="log" id="activityLog" aria-live="polite"></div>
+
+        <footer class="note">
+          <strong>Important security note:</strong> Storing bot tokens in browser Local Storage is convenient but insecure. If the device/browser is compromised, tokens can be extracted. See the security section below for recommendations.
+        </footer>
+
+      </div>
+
+    </div>
+
+    <div style="margin-top:12px;color:var(--muted);font-size:13px" class="card">
+      <div><strong>Backend webhook endpoint</strong> (edit in the JS below): <code id="backendUrlDisplay">[NOT SET]</code></div>
+      <div class="small" style="margin-top:6px">Replace the placeholder URL with your backend's secure service endpoint. Do not store client secret in frontend.</div>
+    </div>
+  </div>
+
+  <script>
+    /*******************************
+     * CONFIGURATION — EDIT HERE
+     *******************************/
+    // Replace with your backend endpoint that implements /provision
+    const BACKEND_WEBHOOK_URL = "http://localhost:3000/provision"; // <<--- CHANGE THIS to your server URL
+    document.getElementById('backendUrlDisplay').textContent = BACKEND_WEBHOOK_URL;
+
+    /*******************************
+     * Helpers & Utilities
+     *******************************/
+    const qs = (s, el=document) => el.querySelector(s);
+    const qsa = (s, el=document) => Array.from(el.querySelectorAll(s));
+    const log = (txt) => {
+      const el = qs('#activityLog');
+      const ts = new Date().toLocaleString();
+      el.innerHTML = `<div style="margin-bottom:10px"><span class="small">${ts}</span><div>${txt}</div></div>` + el.innerHTML;
+    };
+
+    /*******************************
+     * Login / Local Storage
+     *******************************/
+    const KEY_NAME = 'user_discord_name';
+    const KEY_TOKEN = 'user_token';
+
+    const startBtn = qs('#startBtn');
+    const loginForm = qs('#loginForm');
+    const saveBtn = qs('#saveBtn');
+    const cancelBtn = qs('#cancelBtn');
+    const discordNameInput = qs('#discordName');
+    const botTokenInput = qs('#botToken');
+    const loginMsg = qs('#loginMsg');
+    const loginDanger = qs('#loginDanger');
+
+    startBtn.addEventListener('click', () => {
+      loginForm.classList.remove('hidden');
+      startBtn.disabled = true;
+    });
+    cancelBtn.addEventListener('click', () => {
+      loginForm.classList.add('hidden');
+      startBtn.disabled = false;
+      loginMsg.textContent = '';
+      loginDanger.textContent = '';
+    });
+
+    function validateToken(tok) {
+      return typeof tok === 'string' && tok.length >= 57;
+    }
+
+    saveBtn.addEventListener('click', () => {
+      loginMsg.textContent = '';
+      loginDanger.textContent = '';
+      const name = discordNameInput.value.trim();
+      const token = botTokenInput.value.trim();
+
+      if (!name) {
+        loginDanger.textContent = 'Please enter your Discord username.';
+        return;
+      }
+      if (!validateToken(token)) {
+        loginDanger.textContent = 'Bot token is invalid — token must be at least 57 characters.';
+        return;
+      }
+      localStorage.setItem(KEY_NAME, name);
+      localStorage.setItem(KEY_TOKEN, token);
+
+      loginMsg.textContent = 'Saved locally. Redirecting to dashboard...';
+      showDashboard();
+    });
+
+    /*******************************
+     * SPA Routing
+     *******************************/
+    const viewLogin = qs('#view-login');
+    const viewDashboard = qs('#view-dashboard');
+    const showNameEl = qs('#showName');
+
+    function showDashboard(){
+      const name = localStorage.getItem(KEY_NAME);
+      if (!name) {
+        viewDashboard.classList.add('hidden');
+        viewLogin.classList.remove('hidden');
+        return;
+      }
+      showNameEl.textContent = name;
+      viewLogin.classList.add('hidden');
+      viewDashboard.classList.remove('hidden');
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelector('.tab[data-tab="bot"]').classList.add('active');
+      qs('#tab-bot').classList.remove('hidden');
+      qs('#tab-mc').classList.add('hidden');
+      log('Dashboard loaded for user: <strong>' + sanitize(name) + '</strong>');
+    }
+
+    function sanitize(s){
+      return (''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    if (localStorage.getItem(KEY_NAME) && localStorage.getItem(KEY_TOKEN)) {
+      setTimeout(showDashboard, 250);
+    }
+
+    qs('#logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem(KEY_NAME);
+      localStorage.removeItem(KEY_TOKEN);
+      log('User logged out and local data cleared.');
+      viewDashboard.classList.add('hidden');
+      viewLogin.classList.remove('hidden');
+      startBtn.disabled = false;
+    });
+
+    qsa('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        qsa('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.dataset.tab;
+        if (target === 'bot') {
+          qs('#tab-bot').classList.remove('hidden');
+          qs('#tab-mc').classList.add('hidden');
+        } else {
+          qs('#tab-bot').classList.add('hidden');
+          qs('#tab-mc').classList.remove('hidden');
+        }
+      });
+    });
+
+    function buildPayload(userName, packageSpec, serviceType, extra = {}) {
+      const token = localStorage.getItem(KEY_TOKEN) || '';
+      const tokenSpoiler = '||' + token + '||';
+      return {
+        user_discord_name: userName,
+        service_type: serviceType,
+        package: packageSpec,
+        user_token: tokenSpoiler,
+        extra: extra,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    async function sendProvisionRequest(payload) {
+      log('Sending provisioning request to backend...');
+      try {
+        const res = await fetch(BACKEND_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const t = await res.text().catch(()=>res.statusText);
+          log('<span class="danger">Provisioning failed:</span> ' + sanitize(t));
+          return { ok:false, status: res.status, text: t };
+        }
+        const data = await res.json().catch(()=>null);
+        log('Provisioning request accepted by backend. Response: ' + (data ? sanitize(JSON.stringify(data)) : 'OK'));
+        return { ok:true, data };
+      } catch(err) {
+        log('<span class="danger">Network error sending provisioning request:</span> ' + sanitize(err.message || err));
+        return { ok:false, error: err };
+      }
+    }
+
+    qs('#confirmBot').addEventListener('click', async () => {
+      const selected = qsa('input[name="botpkg"]').find(r=>r.checked).value;
+      const pkg = JSON.parse(selected);
+      const userName = localStorage.getItem(KEY_NAME);
+      if (!userName || !localStorage.getItem(KEY_TOKEN)) {
+        log('<span class="danger">No user data found. Please login again.</span>');
+        return;
+      }
+      const payload = buildPayload(userName, pkg, 'bot_hosting');
+      log('Payload prepared: ' + sanitize(JSON.stringify(payload)));
+      const resp = await sendProvisionRequest(payload);
+      if (resp.ok) {
+        log('Bot hosting request processed. Check backend for provisioning updates.');
+      }
+    });
+
+    qs('#confirmMC').addEventListener('click', async () => {
+      const selected = qsa('input[name="mcpkg"]').find(r=>r.checked).value;
+      const pkg = JSON.parse(selected);
+      const credits = qs('#mcCredits').value.trim();
+      const userName = localStorage.getItem(KEY_NAME);
+      if (!userName || !localStorage.getItem(KEY_TOKEN)) {
+        log('<span class="danger">No user data found. Please login again.</span>');
+        return;
+      }
+      const extra = {};
+      if (credits) extra.charged = credits;
+      const payload = buildPayload(userName, pkg, 'minecraft_hosting', extra);
+      log('Payload prepared: ' + sanitize(JSON.stringify(payload)));
+      const resp = await sendProvisionRequest(payload);
+      if (resp.ok) {
+        log('Minecraft hosting request processed. Check backend for provisioning updates.');
+      }
+    });
+
+    (function guardBackendUrl() {
+      const defaultMarker = "localhost";
+      if (BACKEND_WEBHOOK_URL.includes(defaultMarker)) {
+        log('<span class="danger">WARNING:</span> BACKEND_WEBHOOK_URL is set to localhost. Change to your real backend URL before production.');
+      }
+    })();
+
+  </script>
+</body>
+</html>
